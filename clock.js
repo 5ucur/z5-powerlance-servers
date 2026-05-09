@@ -97,7 +97,7 @@ function rules(layer, digit, dots) {
         if (layer === 1 || layer === 3)
             // put the lil arrows on the correct heights
             // ms/10 >= 75 has that nice snappy delay compared to 50 or 100
-            return (!(parseInt(time.getMilliseconds()/10) >= 75) ? layer === 1 ? "▼" : "▲" : " ")
+            return (!(parseInt(time.getMilliseconds()/10, 10) >= 75) ? layer === 1 ? "▼" : "▲" : " ")
         else return " "
     // working with numbers
     else
@@ -106,7 +106,7 @@ function rules(layer, digit, dots) {
         return {
             0: (includes("02356789", digit) ? tiles[0][0] : digit === "1" ? tiles[0][1] : tiles[0][2]),
             1: (includes("0489", digit) ? tiles[1][0] : includes("1237", digit) ? tiles[1][1] : tiles[1][2]),
-            2: ((parseInt(digit) > 1 && digit !== "7") ? tiles[2][0] : includes("17", digit) ? tiles[2][1] : tiles[2][2]),
+            2: ((parseInt(digit, 10) > 1 && digit !== "7") ? tiles[2][0] : includes("17", digit) ? tiles[2][1] : tiles[2][2]),
             3: (includes("068", digit) ? tiles[3][0] : includes("134579", digit) ? tiles[3][1] : tiles[3][2]),
             4: (includes("0235689", digit) ? tiles[4][0] : tiles[4][1]),
         }[layer]
@@ -141,9 +141,9 @@ function onUpdate()
 
     // toLocaleString didn't work so i did a thing
     if (twelvehour) {
-        PM = (parseInt(clock.substring(0, 2)) > 12)
+        PM = (parseInt(clock.substring(0, 2), 10) > 12)
         if (PM) {
-            let hr = String(parseInt(clock.substring(0, 2)) - 12)
+            let hr = String(parseInt(clock.substring(0, 2), 10) - 12)
             if (!hr.length-1)
                 hr = "0"+hr
             clock = hr + clock.substring(2, 8)
