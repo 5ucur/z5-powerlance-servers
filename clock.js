@@ -1,10 +1,11 @@
 /**
  * @file Digital Clock (for Last Call BBS)
- * @version 0.2
+ * @version 0.2.1
  *
  */
 
-// About 1.5 hours of running on fumes when making this, and about twice as much making it better for version 0.2
+// About 1.5 hours of running on fumes when making this,
+// and about twice as much making it better for version 0.2
 
 var time;                   // For the current time
 var digital;                // For the fancy digits
@@ -199,7 +200,7 @@ Date.prototype.getTimeString = function(mode) {
         this.AMPM = (currentHoursInt >= 12) ? "PM" : "AM";
 
         // Get modulo in division with 12 - so, get the 12h time
-        // Unless it's noon or less
+        // Unless it's noon or less (no issue, but unnecessary)
         if (currentHoursInt > 12)
             currentHoursInt %= 12
 
