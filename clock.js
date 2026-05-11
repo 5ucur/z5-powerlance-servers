@@ -4,7 +4,7 @@
  *
  */
 
-// About two hours of running on fumes when making this, and about two hours more making it better for version 0.2
+// About 1.5 hours of running on fumes when making this, and about twice as much making it better for version 0.2
 
 var time;                   // For the current time
 var digital;                // For the fancy digits
