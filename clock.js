@@ -1,48 +1,231 @@
-/*
- *  This mess was coded in like 1.5h or so, on zero hours of sleep.
- *  So if it sucks, it's clear why. Beats me why it even works so well.
- *  Releasing this under this license i found on tom7 (dot org):
+/**
+ * @file Digital Clock (for Last Call BBS)
+ * @version 0.2
  *
- *  Tom 7 Happy License Agreement - Free Happiness through Free Software
- *
- *  This program may be redistributed, reverse engineered, altered, sold,
- *  adapted, published, publicly maligned, or in fact anything you want with it,
- *  as long as it makes someone happy. If the net unhappiness which is produced
- *  from the use of the program and derivatives ever exceeds the net happiness,
- *  then distribution of the program should cease, as the license will become
- *  void.
  */
 
-var time;
-var digital;
-var twelvehour = false;
-var drawHints = true;
-var PM;
+// About two hours of running on fumes when making this, and about two hours more making it better for version 0.2
+
+var time;                   // For the current time
+var digital;                // For the fancy digits
+var hourMode = 12;          // For the 24h vs 12h mode
+var drawHints = true;       // For the additional text
 
 function getName()
 {
     return 'Digital Clock';
 }
 
-// The whole numbers
-/*
-▟█▙   ▙ ▟█▙ ▟█▙ ▟   ▟█▙ ▟█▙ ▟█▙ ▟█▙ ▟█▙
-▌ ▐   ▐   ▐   ▐ ▌ ▐ ▌   ▌     ▐ ▌ ▐ ▌ ▐
-█ █   █ ███ ███ ███ ███ ███   █ ███ ███
-▌ ▐   ▐ ▌     ▐   ▐   ▐ ▌ ▐   ▐ ▌ ▐   ▐
-▜█▛   ▛ ▜█▛ ▜█▛   ▛ ▜█▛ ▜█▛   ▛ ▜█▛ ▜█▛
-*/
+function onConnect()
+{
+    // TODO for 0.3: make hourMode and drawHints save and load
+}
+
+function onUpdate()
+{
+    clearScreen();
+
+    // Fetch current time
+    time = new Date();
+    // And then fetch the timestring of the current hour mode (12 vs 24)
+    // using a custom-defined method (see below)
+    clock = time.getTimeString(hourMode);
+
+    // Draw the hotkeys and the regular text clock
+    if (drawHints) {
+        drawText("Enter: " + hourMode + "h" + " mode", 1, 1, 0);
+        drawText("Tab: toggle this text", 1, 1, 1);
+        if (hourMode === 12)
+            drawText(clock + " " + time.AMPM, 1, 44, 0);
+        else
+            drawText(clock, 1, 47, 0);
+    }
+
+    // Get the fancy digits
+    digital = getDigits(clock);
+
+    // And draw them
+    for (let i = 0; i < 5; i++) {
+        drawText(digital[i]+" ", 11+i, 11, 5+i);
+    }
+
+    // Get the am/pm sign and draw it, if necessary
+    if (hourMode === 12) {
+        for (let i = 0; i < 5; i++) {
+            drawText(ampm[time.AMPM][i]+" ", 15-i, 23, 11+i);
+        }
+    }
+}
+
+function onInput(key)
+{
+    // Enter switches 24h/12h modes
+    if (key == 10) {
+        hourMode = 12 + 12*(hourMode === 12);
+    // Tab hides the hint text
+    } else if (key == 9) {
+        drawHints = !drawHints;
+    } 
+}
+
+//----------------------------------------------------------------------------//
+// Custom functions                                                           //
+//----------------------------------------------------------------------------//
+
+// This function builds the fancy digits, layer by layer, character by character
+function getDigits(timestring) {
+    layers = [
+        '',
+        '',
+        '',
+        '',
+        '',
+    ]
+    // For each layer
+    for (let a = 0; a < 5; a++) {
+        // And for each character in the timestring (including ":" colons)
+        for (let i = 0; i < timestring.length; i++) {
+            // We add the proper tile as determined by the rules function
+            layers[a] = layers[a] + rules(a, timestring[i]);
+        }
+    }
+    return layers
+}
+
+// This function fetches the correct blocks for the current layer and character
+// TODO 0.3: This whole thing could be more efficient
+function rules(layer, character) {
+    // If we're working with the ":" colon
+    if (character === ":") {
+        // We ensure it only gets elements on the correct layers
+        if (layer === 1 || layer === 3) {
+            // Blinking on three quarters of a second has a nice snappy delay,
+            // compared to full or half second synch
+            if ((parseInt(time.getMilliseconds()/10, 10) < 75)) {
+                if (layer === 1) // Correct arrows on correct layers!
+                    return "▼"
+                else
+                    return "▲"
+            } else return " " // Empty for blinking
+        }
+        else return " " // Empty for layers 0, 2, and 4
+    }
+
+    // Working with digits
+    else
+        // I tried avoiding the ternary operator mess but it is
+        // too much work for 0.2. Maybe in 0.3. TODO!
+        // Here is at least a better-formatted form
+        return {
+            // Layer 0
+            // All the digits in "02356789" use the full layer 0
+            // Digit 1 uses the right side, and 4 uses the left side
+            0: ("02356789".includes(character)
+                    ? tiles[0][0]
+                    : character === "1"
+                        ? tiles[0][1]
+                        : tiles[0][2]
+            ),
+            // Layer 1
+            // The digits in "0489" use both the sides of layer 1
+            // The digits in "1237" use only the right side.
+            // The remaining ones, 5 and 6, use the left side only
+            1: ("0489".includes(character)
+                ? tiles[1][0]
+                : "1237".includes(character)
+                    ? tiles[1][1]
+                    : tiles[1][2]
+                ),
+            // Layer 2
+            // All digits above 1, except for 7, use the full layer 2
+            // Digits 1 and 7 use the right side, and 0 uses the sides only
+            2: ((parseInt(character, 10) > 1 && character !== "7")
+                ? tiles[2][0]
+                : "17".includes(character)
+                    ? tiles[2][1]
+                    : tiles[2][2]
+                ),
+            // Layer 3
+            // The digits in "068" use both sides of layer 3
+            // The digits in "134579" use only the right side
+            // The remaining digit, 2, uses only the left side
+            3: ("068".includes(character)
+                ? tiles[3][0]
+                : "134579".includes(character)
+                    ? tiles[3][1]
+                    : tiles[3][2]
+                ),
+            // Layer 4
+            // All the digits in "0235689" use the full layer 4
+            // Digits 1, 4, and 7 use the right side
+            4: ("0235689".includes(character)
+                ? tiles[4][0]
+                : tiles[4][1]
+            ),
+        // This is a dictionary, so we get the appropriate layer rules
+        // It's essentially a lookup table except with if's inside it
+        }[layer]
+}
+
+//----------------------------------------------------------------------------//
+// Custom implementations for methods not included in Axiom QuickServe JS     //
+//----------------------------------------------------------------------------//
+
+// Check if string includes substring
+String.prototype.includes = function(substr) {
+    return this.indexOf(substr) !== -1;
+}
+
+// Pad string with pad, by length characters
+// Admittedly a little unnecessarily expanded for this one-off hard-coded purpose
+String.prototype.lpad = function(padLength, pad) {
+    let str = this;
+    while (str.length < padLength+1)
+        str = pad + str;
+    return str;
+}
+
+// Custom method to get timestring in 24 or 12 hour mode
+Date.prototype.getTimeString = function(mode) {
+    // If 12h mode
+    if (mode === 12) {
+        // Get current time string
+        let currentTime = this.toTimeString();
+        // Get the hours
+        let currentHoursInt = parseInt(currentTime.substr(0, 2), 10);
+
+        // Check if AM or PM (also apply custom property)
+        // Defining PM as noon or beyond, AM as midnight or beyond
+        this.AMPM = (currentHoursInt >= 12) ? "PM" : "AM";
+
+        // Subtract 12 if PM but not noon
+        if (this.AMPM === "PM" && currentHoursInt !== 12)
+            currentHoursInt -= 12;
+
+        // Pad with zero as necessary and add the rest of the timestring,
+        // cut to the needed length, and return
+        return String(currentHoursInt).lpad(1, '0') + currentTime.substr(2, 6);
+
+    // If 24h mode
+    } else
+        // Return the usual output here, cut to the needed length
+        return this.toTimeString().substr(0, 8);
+}
+
+//----------------------------------------------------------------------------//
+// Layers (string arrays) definitions                                         //
+//----------------------------------------------------------------------------//
 
 // Markers for 12h time
 ampm = {
-    "0" : [
+    "AM" : [
         "▟█▙  ▟▄▙",
         "▌ ▐  ▌█▐",
         "███  ▌█▐",
         "▌ ▐  ▌▀▐",
         "▜ ▛  ▜ ▛"
     ],
-    "1" : [
+    "PM" : [
         "▟█▙  ▟▄▙",
         "▌ ▐  ▌█▐",
         "███  ▌█▐",
@@ -51,7 +234,17 @@ ampm = {
     ]
 }
 
-// Tiling because a lot of numbers share same parts
+// For reference, the whole numbers
+/*
+▟█▙   ▙ ▟█▙ ▟█▙ ▟   ▟█▙ ▟█▙ ▟█▙ ▟█▙ ▟█▙ // layer 0
+▌ ▐   ▐   ▐   ▐ ▌ ▐ ▌   ▌     ▐ ▌ ▐ ▌ ▐ // layer 1
+█ █   █ ███ ███ ███ ███ ███   █ ███ ███ // layer 2
+▌ ▐   ▐ ▌     ▐   ▐   ▐ ▌ ▐   ▐ ▌ ▐   ▐ // layer 3
+▜█▛   ▛ ▜█▛ ▜█▛   ▛ ▜█▛ ▜█▛   ▛ ▜█▛ ▜█▛ // layer 4
+*/
+
+// A lot of the numbers share identical parts
+// So we construct them with these tiles and some logic
 tiles = {
     "0": {
         "0": " ▟█▙ ",
@@ -77,113 +270,4 @@ tiles = {
         "0": " ▜█▛ ",
         "1": "   ▛ "
     },
-}
-
-function onConnect()
-{
-    // this gotta exist even if empty...
-}
-
-// Workaround for string.includes not working here
-function includes(str, substr) {
-    return str.indexOf(substr) !== -1;
-}
-
-// fustercluck
-function rules(layer, digit, dots) {
-    // if we're working with the colon
-    if (digit === ":")
-        // ensure it only gets printed to the right heights
-        if (layer === 1 || layer === 3)
-            // put the lil arrows on the correct heights
-            // ms/10 >= 75 has that nice snappy delay compared to 50 or 100
-            return (!(parseInt(time.getMilliseconds()/10, 10) >= 75) ? layer === 1 ? "▼" : "▲" : " ")
-        else return " "
-    // working with numbers
-    else
-        // fustercluck proper
-        // basically the tiling
-        return {
-            0: (includes("02356789", digit) ? tiles[0][0] : digit === "1" ? tiles[0][1] : tiles[0][2]),
-            1: (includes("0489", digit) ? tiles[1][0] : includes("1237", digit) ? tiles[1][1] : tiles[1][2]),
-            2: ((parseInt(digit, 10) > 1 && digit !== "7") ? tiles[2][0] : includes("17", digit) ? tiles[2][1] : tiles[2][2]),
-            3: (includes("068", digit) ? tiles[3][0] : includes("134579", digit) ? tiles[3][1] : tiles[3][2]),
-            4: (includes("0235689", digit) ? tiles[4][0] : tiles[4][1]),
-        }[layer]
-}
-
-// fustercluck, one cluster of fucks higher
-function getDigits(timestring) {
-    layers = [
-        '',
-        '',
-        '',
-        '',
-        '',
-    ]
-    // layers!
-    for (let a = 0; a < 5; a++) {
-        // digits!
-        for (let i = 0; i < timestring.length; i++) {
-            layers[a] = layers[a] + rules(a, timestring[i])
-        }
-    }
-    return layers
-}
-
-function onUpdate()
-{
-    // It is safe to completely redraw the screen during every update:
-    clearScreen();
-    // and here comes the time
-    time = new Date();
-    clock = time.toTimeString().substr(0,8);
-
-    // toLocaleString didn't work so i did a thing
-    if (twelvehour) {
-        PM = (parseInt(clock.substring(0, 2), 10) > 12)
-        if (PM) {
-            let hr = String(parseInt(clock.substring(0, 2), 10) - 12)
-            if (!hr.length-1)
-                hr = "0"+hr
-            clock = hr + clock.substring(2, 8)
-        }
-    }
-    // some grey text up top
-    if (drawHints) {
-        if (twelvehour) {
-            drawText(clock, 1, 44, 0);
-            drawText(PM ? "PM" : "AM", 1, 53, 0);
-        } else {
-            drawText(clock, 1, 47, 0);        
-        }
-        drawText("Enter: " + (twelvehour ? "24h" : "12h") + " mode", 1, 1, 0);
-        drawText("Tab: toggle this text", 1, 1, 1);
-    }
-
-    // get our fancy digits
-    digital = getDigits(clock)
-
-    // n draw 'em
-    for (let i = 0; i < 5; i++) {
-        drawText(digital[i]+" ", 11+i, 11, 5+i);
-    }
-    // also the am pm sign
-    if (twelvehour) {
-        for (let i = 0; i < 5; i++) {
-            drawText(ampm[PM ? "1" : "0"][i]+" ", 15-i, 23, 11+i);
-        }
-    }
-}
-
-// finally, the handling of keys.
-function onInput(key)
-{
-    // enter switches 24/12
-    if (key == 10) {
-        twelvehour = !twelvehour
-    // and tab hides the grey text
-    } else if (key == 9) {
-        drawHints = !drawHints
-    }
 }
