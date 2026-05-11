@@ -33,7 +33,7 @@ function onUpdate()
 
     // Draw the hotkeys and the regular text clock
     if (drawHints) {
-        drawText("Enter: " + hourMode + "h" + " mode", 1, 1, 0);
+        drawText("Enter: " + hourMode + "h_mode", 1, 1, 0);
         drawText("Tab: toggle this text", 1, 1, 1);
         if (hourMode === 12)
             drawText(clock + " " + time.AMPM, 1, 44, 0);
