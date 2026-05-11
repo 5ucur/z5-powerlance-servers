@@ -198,9 +198,10 @@ Date.prototype.getTimeString = function(mode) {
         // Defining PM as noon or beyond, AM as midnight or beyond
         this.AMPM = (currentHoursInt >= 12) ? "PM" : "AM";
 
-        // Subtract 12 if PM but not noon
-        if (this.AMPM === "PM" && currentHoursInt !== 12)
-            currentHoursInt -= 12;
+        // Get modulo in division with 12 - so, get the 12h time
+        // Unless it's noon or less
+        if (currentHoursInt > 12)
+            currentHoursInt %= 12
 
         // Pad with zero as necessary and add the rest of the timestring,
         // cut to the needed length, and return
